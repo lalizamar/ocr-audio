@@ -9,13 +9,13 @@ from PIL import Image
 from gtts import gTTS
 from googletrans import Translator
 
-# Crear carpeta para audios si no existe
+# Crear carpeta temporal si no existe
 try:
     os.mkdir("temp")
 except:
     pass
 
-# Eliminar archivos viejos
+# Limpiar archivos de audio antiguos
 def remove_files(n):
     mp3_files = glob.glob("temp/*mp3")
     if len(mp3_files) != 0:
@@ -24,114 +24,107 @@ def remove_files(n):
         for f in mp3_files:
             if os.stat(f).st_mtime < now - n_days:
                 os.remove(f)
+                print("Deleted ", f)
+
 remove_files(7)
 
-# Convertir texto a audio
+# Traducción y conversión de texto a audio
 def text_to_speech(input_language, output_language, text, tld):
+    translator = Translator()
     translation = translator.translate(text, src=input_language, dest=output_language)
     trans_text = translation.text
     tts = gTTS(trans_text, lang=output_language, tld=tld, slow=False)
     try:
-        my_file_name = text[0:20]
+        my_file_name = text[0:20].strip().replace(" ", "_")
     except:
         my_file_name = "audio"
     tts.save(f"temp/{my_file_name}.mp3")
     return my_file_name, trans_text
 
-# --- DISEÑO ARTÍSTICO Y TIERNO ---
-st.set_page_config(page_title="OCR Mágico con Audio", layout="centered", page_icon="🌟")
-st.markdown("""
-<style>
-body {
-    background: linear-gradient(to bottom, #ffe6f0, #f7f0ff);
-    color: #4b2e83;
-    font-family: 'Comic Sans MS', cursive;
-}
-.stButton>button {
-    background-color: #ffcce0;
-    color: #4b2e83;
-    border-radius: 15px;
-    font-weight: bold;
-    border: 2px solid #f78fb3;
-    transition: 0.3s;
-}
-.stButton>button:hover {
-    background-color: #ff9eb5;
-    color: white;
-}
-.stSidebar {
-    background-color: #fff0f5;
-}
-</style>
-""", unsafe_allow_html=True)
+# Fondo personalizado 🌸
+st.markdown(
+    """
+    <style>
+    body {
+        background: linear-gradient(135deg, #ffe6f0, #f7f0ff);
+        color: #3d3d3d;
+        font-family: 'Comic Sans MS', cursive;
+    }
+    .stButton>button {
+        background-color: #ffc4e1;
+        color: black;
+        border-radius: 20px;
+        padding: 0.5em 2em;
+        font-size: 1.1em;
+    }
+    .st-c5, .st-c6 {
+        background-color: #fff0f5;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
-st.image("https://i.imgur.com/tbWbQ8b.png", width=150)
-st.title("\U0001F4DD✨ OCR Mágico con Audio y Traducción")
+# Encabezado principal con estilo ✨
 st.markdown("""
-Convierte imágenes con texto en audio traducido ✨ Ideal para 📃 apuntes, 📄 facturas y 📃 documentos. 
-
-📷 Sube una imagen o toma una foto, y escucha la magia. 🎵
+# 📄✨ OCR Mágico con Audio y Traducción
+Convierte imágenes con texto en audio traducido ✨ Ideal para 📄 apuntes, 📄 facturas y 📄 documentos.  
+🎵 Sube una imagen o toma una foto, y escucha la magia. 
 """)
 
-# Paso 1: Imagen
-st.header("\U0001f4f7 Paso 1: Sube o toma una imagen")
+# Paso 1️⃣: Subida o captura de imagen
+st.markdown("""## 📸 Paso 1: Sube o toma una imagen""")
 cam_ = st.checkbox("📷 Usar cámara")
-if cam_:
-    img_file_buffer = st.camera_input("Toma una foto con tu cámara")
-else:
-    img_file_buffer = None
+img_file_buffer = st.camera_input("Toma una foto") if cam_ else None
 bg_image = st.file_uploader("📁 Sube una imagen (JPG/PNG)", type=["png", "jpg", "jpeg"])
+
 text = ""
 
 if bg_image is not None:
     uploaded_file = bg_image
-    st.image(uploaded_file, caption='🖼️ Vista previa de la imagen', use_container_width=True)
+    st.image(uploaded_file, caption='🖼 Imagen cargada', use_container_width=True)
     with open(uploaded_file.name, 'wb') as f:
         f.write(uploaded_file.read())
-    st.success("✅ Imagen cargada correctamente")
-    img_cv = cv2.imread(f"{uploaded_file.name}")
+    img_cv = cv2.imread(uploaded_file.name)
     img_rgb = cv2.cvtColor(img_cv, cv2.COLOR_BGR2RGB)
     text = pytesseract.image_to_string(img_rgb)
-    st.markdown("### 🔍 Texto detectado:")
-    st.write(text)
 
 if img_file_buffer is not None:
-    st.markdown("### 🎞️ Procesando foto tomada...")
     bytes_data = img_file_buffer.getvalue()
     cv2_img = cv2.imdecode(np.frombuffer(bytes_data, np.uint8), cv2.IMREAD_COLOR)
-    filtro = st.radio("🎨 Aplicar filtro a la imagen", ("Con Filtro", "Sin Filtro"))
-    if filtro == 'Con Filtro':
-        cv2_img = cv2.bitwise_not(cv2_img)
+    cv2_img = cv2.bitwise_not(cv2_img) if st.radio("¿Deseas invertir colores?", ('Sí', 'No')) == 'Sí' else cv2_img
     img_rgb = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2RGB)
     text = pytesseract.image_to_string(img_rgb)
-    st.markdown("### 🔍 Texto detectado:")
-    st.write(text)
 
-# Paso 2: Traducción y Audio
-st.header("🌐 Paso 2: Traduce y escucha tu texto")
+if text:
+    st.success("✅ Texto reconocido exitosamente")
+    st.markdown(f"**📋 Texto detectado:**\n\n{text}")
+
+# Paso 2️⃣: Traducción y conversión
+st.markdown("""## 🌐 Paso 2: Traduce y escucha tu texto""")
 with st.expander("🎧 Parámetros de idioma y voz"):
     translator = Translator()
-    in_lang = st.selectbox("🌍 Idioma del texto original", ["Español", "Inglés", "Japonés", "Mandarín", "Coreano", "Bengalí"])
-    out_lang = st.selectbox("🎤 Idioma para escuchar el audio", ["Español", "Inglés", "Japonés", "Mandarín", "Coreano", "Bengalí"])
-    accent = st.selectbox("🔊 Acento (solo inglés)", ["Default", "India", "United Kingdom", "United States", "Canada", "Australia", "Ireland", "South Africa"])
+    in_lang = st.selectbox("🌍 Idioma de entrada", ("Ingles", "Español", "Bengali", "Koreano", "Mandarin", "Japones"))
+    input_language = {"Ingles": "en", "Español": "es", "Bengali": "bn", "Koreano": "ko", "Mandarin": "zh-cn", "Japones": "ja"}[in_lang]
 
-    lang_dict = {"Español": "es", "Inglés": "en", "Japonés": "ja", "Mandarín": "zh-cn", "Coreano": "ko", "Bengalí": "bn"}
-    tld_dict = {"Default": "com", "India": "co.in", "United Kingdom": "co.uk", "United States": "com", "Canada": "ca", "Australia": "com.au", "Ireland": "ie", "South Africa": "co.za"}
+    out_lang = st.selectbox("🌎 Idioma de salida", ("Ingles", "Español", "Bengali", "Koreano", "Mandarin", "Japones"))
+    output_language = {"Ingles": "en", "Español": "es", "Bengali": "bn", "Koreano": "ko", "Mandarin": "zh-cn", "Japones": "ja"}[out_lang]
 
-    input_language = lang_dict[in_lang]
-    output_language = lang_dict[out_lang]
-    tld = tld_dict[accent]
-    show_text = st.checkbox("📜 Mostrar texto traducido")
+    english_accent = st.selectbox("🎤 Acento del inglés", ("Default", "India", "United Kingdom", "United States", "Canada", "Australia", "Ireland", "South Africa"))
+    tld = {"Default": "com", "India": "co.in", "United Kingdom": "co.uk", "United States": "com", "Canada": "ca", "Australia": "com.au", "Ireland": "ie", "South Africa": "co.za"}.get(english_accent, "com")
+
+    display_output_text = st.checkbox("📜 Mostrar texto traducido")
 
 if st.button("🌟 Convertir a Audio"):
-    if text.strip() == "":
-        st.warning("⚠️ No se detectó texto para convertir.")
-    else:
+    if text:
         result, output_text = text_to_speech(input_language, output_language, text, tld)
         audio_file = open(f"temp/{result}.mp3", "rb")
         audio_bytes = audio_file.read()
-        st.success("✅ Audio generado con éxito")
+        st.markdown("### 🎧 Tu audio:")
         st.audio(audio_bytes, format="audio/mp3", start_time=0)
-        if show_text:
-            st.markdown("### 📃 Texto traducido:")
+
+        if display_output_text:
+            st.markdown("### 📜 Texto traducido:")
             st.write(output_text)
+    else:
+        st.warning("⚠️ Primero debes subir o capturar una imagen con texto")
